@@ -3,95 +3,128 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Leitor de Estoque (Acumulativo)</title>
+    <title>Coletor de Dados Pro</title>
     <script src="https://unpkg.com/html5-qrcode" type="text/javascript"></script>
     <style>
-        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; padding: 20px; text-align: center; background-color: #f0f2f5; }
+        body { font-family: 'Segoe UI', sans-serif; padding: 15px; text-align: center; background-color: #f4f6f9; color: #333; }
         
-        h2 { color: #333; }
+        /* Área da Câmera */
+        #reader { width: 100%; max-width: 500px; margin: 0 auto; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 15px rgba(0,0,0,0.1); background: #000; }
         
-        #reader { width: 100%; max-width: 500px; margin: 0 auto; border-radius: 10px; overflow: hidden; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
+        /* Botões */
+        .controls { display: flex; flex-wrap: wrap; justify-content: center; gap: 10px; margin: 20px 0; }
         
-        .controls { margin: 20px 0; }
+        .btn { padding: 12px 20px; color: white; border: none; border-radius: 8px; cursor: pointer; font-size: 15px; font-weight: 600; flex: 1; min-width: 120px; transition: transform 0.1s; box-shadow: 0 2px 5px rgba(0,0,0,0.2); }
+        .btn:active { transform: scale(0.96); }
         
-        .btn { padding: 12px 24px; color: white; border: none; border-radius: 8px; cursor: pointer; font-size: 16px; font-weight: bold; transition: opacity 0.2s; box-shadow: 0 2px 4px rgba(0,0,0,0.2); margin: 5px; }
-        .btn:active { transform: scale(0.98); }
         .btn-start { background-color: #28a745; }
-        .btn-stop { background-color: #dc3545; }
+        .btn-stop { background-color: #6c757d; } /* Cinza para parar */
         .btn-csv { background-color: #007bff; }
+        .btn-clear { background-color: #dc3545; } /* Vermelho para limpar */
 
-        .stats { display: flex; justify-content: space-around; max-width: 500px; margin: 15px auto; background: white; padding: 10px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.05); }
+        /* Estatísticas */
+        .stats { display: flex; justify-content: space-around; max-width: 500px; margin: 15px auto; background: white; padding: 15px; border-radius: 10px; box-shadow: 0 2px 8px rgba(0,0,0,0.05); }
         .stat-item { display: flex; flex-direction: column; }
-        .stat-label { font-size: 12px; color: #666; }
-        .stat-value { font-size: 20px; font-weight: bold; color: #333; }
+        .stat-label { font-size: 11px; text-transform: uppercase; letter-spacing: 1px; color: #888; }
+        .stat-value { font-size: 24px; font-weight: 800; color: #2c3e50; }
 
-        #result-list { list-style: none; padding: 0; margin-top: 20px; max-width: 500px; margin-left: auto; margin-right: auto; }
+        /* Lista */
+        #result-list { list-style: none; padding: 0; margin-top: 20px; max-width: 500px; margin-left: auto; margin-right: auto; text-align: left; }
         
-        .item-row { background: white; border-bottom: 1px solid #eee; padding: 15px; display: flex; justify-content: space-between; align-items: center; border-radius: 8px; margin-bottom: 8px; box-shadow: 0 1px 3px rgba(0,0,0,0.05); transition: background 0.3s; }
+        .item-row { background: white; border-bottom: 1px solid #f0f0f0; padding: 12px 15px; display: flex; justify-content: space-between; align-items: center; border-radius: 8px; margin-bottom: 8px; box-shadow: 0 1px 3px rgba(0,0,0,0.05); }
         
-        /* Animação visual quando o item é atualizado */
-        .updated { background-color: #d4edda !important; }
+        .updated { animation: flashGreen 1s; }
         
-        .code-info { text-align: left; }
-        .code-text { font-weight: bold; font-size: 1.1em; display: block; }
-        .code-time { font-size: 0.8em; color: #888; }
+        @keyframes flashGreen {
+            0% { background-color: #d4edda; }
+            100% { background-color: white; }
+        }
         
-        .qty-badge { background-color: #007bff; color: white; padding: 5px 12px; border-radius: 20px; font-weight: bold; min-width: 30px; }
+        .code-text { font-weight: bold; font-size: 16px; color: #333; display: block; }
+        .code-time { font-size: 12px; color: #999; }
+        .qty-badge { background-color: #eef2f7; color: #007bff; padding: 6px 14px; border-radius: 20px; font-weight: 800; font-size: 16px; border: 1px solid #dee2e6; }
     </style>
 </head>
 <body>
 
-    <h2>Leitor de Estoque</h2>
+    <h3>📦 Coletor de Estoque</h3>
     
     <div id="reader"></div>
     
     <div class="stats">
         <div class="stat-item">
-            <span class="stat-label">Itens Únicos</span>
+            <span class="stat-label">Produtos</span>
             <span class="stat-value" id="count-unique">0</span>
         </div>
         <div class="stat-item">
-            <span class="stat-label">Total Volumes</span>
+            <span class="stat-label">Total Itens</span>
             <span class="stat-value" id="count-total">0</span>
         </div>
     </div>
 
     <div class="controls">
-        <button id="start-btn" class="btn btn-start">📷 Iniciar Câmera</button>
-        <button id="stop-btn" class="btn btn-stop" style="display:none;">⏹ Parar</button>
-        <button onclick="baixarCSV()" class="btn btn-csv">📥 Baixar CSV</button>
+        <button id="start-btn" class="btn btn-start">📷 Ler Código</button>
+        <button id="stop-btn" class="btn btn-stop" style="display:none;">⏹ Parar Câmera</button>
+        <button onclick="baixarCSV()" class="btn btn-csv">📥 Excel/CSV</button>
+        <button onclick="limparLista()" class="btn btn-clear">🗑️ Limpar</button>
     </div>
 
-    <ul id="result-list">
-        </ul>
+    <ul id="result-list"></ul>
 
     <script>
         const html5QrCode = new Html5Qrcode("reader");
-        
-        // Objeto principal para armazenar os dados:
-        // Chave = Código de Barras, Valor = { qtd: numero, data: string }
         let estoque = {}; 
-        
         let isScanning = false;
-        const config = { fps: 10, qrbox: { width: 250, height: 250 } };
+        
+        // CONFIGURAÇÃO DO SCANNER E FOCO
+        const config = { 
+            fps: 10, 
+            qrbox: { width: 250, height: 250 },
+            aspectRatio: 1.0
+        };
 
-        // Sons de feedback (opcional, mas ajuda muito)
-        const beep = new Audio('data:audio/wav;base64,UklGRl9vT19XQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YU'); // Placeholder silencioso, navegadores modernos bloqueiam autoplay sem interação.
+        // Solicita foco contínuo nas constraints de vídeo
+        const videoConstraints = {
+            facingMode: "environment",
+            focusMode: "continuous" // Tenta forçar o foco automático contínuo
+        };
 
         document.getElementById('start-btn').addEventListener('click', () => {
             Html5Qrcode.getCameras().then(devices => {
                 if (devices && devices.length) {
-                    const cameraId = devices.length > 1 ? devices[1].id : devices[0].id;
                     html5QrCode.start(
-                        { facingMode: "environment" },
+                        { facingMode: "environment" }, // Usa constraints padrão + config interna
                         config,
                         onScanSuccess
                     ).then(() => {
+                        // Tenta aplicar o foco contínuo APÓS iniciar (melhor compatibilidade)
+                        aplicarFocoContinuo();
                         toggleButtons(true);
                     });
+                } else {
+                    alert("Nenhuma câmera encontrada.");
                 }
-            }).catch(err => alert("Erro na câmera: " + err));
+            }).catch(err => alert("Erro ao acessar câmera: " + err));
         });
+
+        // Função auxiliar para aplicar settings de vídeo avançados
+        function aplicarFocoContinuo() {
+            // Nota: Nem todos os navegadores suportam 'applyConstraints'
+            // O código abaixo é uma tentativa de "Melhor Esforço"
+            try {
+                const track = html5QrCode.getRunningTrack();
+                if (track) {
+                    const capabilities = track.getCapabilities();
+                    if (capabilities.focusMode) {
+                        track.applyConstraints({
+                            advanced: [{ focusMode: "continuous" }]
+                        });
+                    }
+                }
+            } catch (e) {
+                console.log("Foco manual não suportado pelo navegador, usando padrão.", e);
+            }
+        }
 
         document.getElementById('stop-btn').addEventListener('click', () => {
             html5QrCode.stop().then(() => toggleButtons(false));
@@ -100,94 +133,86 @@
         function toggleButtons(scanning) {
             document.getElementById('start-btn').style.display = scanning ? 'none' : 'inline-block';
             document.getElementById('stop-btn').style.display = scanning ? 'inline-block' : 'none';
-            isScanning = scanning;
         }
 
         function onScanSuccess(decodedText) {
-            // Pausa breve para evitar leitura múltipla do mesmo frame
-            html5QrCode.pause();
+            html5QrCode.pause(); // Pausa para processar
+            
+            const dataHora = new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
 
-            const dataHora = new Date().toLocaleTimeString();
-
-            // LÓGICA DE ACUMULAÇÃO
             if (estoque[decodedText]) {
-                // Se já existe, incrementa
                 estoque[decodedText].qtd += 1;
                 estoque[decodedText].lastTime = dataHora;
                 atualizarVisualRow(decodedText, true);
             } else {
-                // Se é novo, cria
-                estoque[decodedText] = {
-                    qtd: 1,
-                    lastTime: dataHora
-                };
+                estoque[decodedText] = { qtd: 1, lastTime: dataHora };
                 adicionarVisualRow(decodedText);
             }
 
             atualizarTotais();
 
-            // Retoma a câmera após 1 segundo
-            setTimeout(() => html5QrCode.resume(), 1000);
+            // Retoma mais rápido agora
+            setTimeout(() => html5QrCode.resume(), 800);
         }
 
         function adicionarVisualRow(codigo) {
             const list = document.getElementById('result-list');
             const li = document.createElement('li');
             li.className = 'item-row';
-            li.id = 'row-' + codigo; // ID único para encontrar fácil depois
+            li.id = 'row-' + codigo;
             
             li.innerHTML = `
                 <div class="code-info">
                     <span class="code-text">${codigo}</span>
-                    <span class="code-time">Última leitura: <span id="time-${codigo}">${estoque[codigo].lastTime}</span></span>
+                    <span class="code-time">Lido às: <span id="time-${codigo}">${estoque[codigo].lastTime}</span></span>
                 </div>
                 <div class="qty-badge" id="qty-${codigo}">1</div>
             `;
-            
-            // Adiciona no topo
             list.prepend(li);
         }
 
         function atualizarVisualRow(codigo, highlight) {
-            // Atualiza os textos no DOM
             document.getElementById(`qty-${codigo}`).innerText = estoque[codigo].qtd;
             document.getElementById(`time-${codigo}`).innerText = estoque[codigo].lastTime;
 
-            // Efeito visual de "flash" verde para mostrar que leu
             if(highlight) {
                 const row = document.getElementById(`row-${codigo}`);
-                row.classList.add('updated');
                 
-                // Remove a classe depois de 500ms para tirar o verde
-                setTimeout(() => {
-                    row.classList.remove('updated');
-                }, 500);
+                // Reinicia a animação CSS removendo e adicionando a classe
+                row.classList.remove('updated');
+                void row.offsetWidth; // Força o reflow (truque do CSS)
+                row.classList.add('updated');
 
-                // Move para o topo da lista para facilitar visualização
                 const list = document.getElementById('result-list');
                 list.prepend(row);
             }
         }
 
         function atualizarTotais() {
-            // Conta chaves do objeto (itens únicos)
             const unicos = Object.keys(estoque).length;
-            
-            // Soma as quantidades (total de volumes)
             const total = Object.values(estoque).reduce((acc, item) => acc + item.qtd, 0);
-
             document.getElementById('count-unique').innerText = unicos;
             document.getElementById('count-total').innerText = total;
         }
 
+        function limparLista() {
+            if(Object.keys(estoque).length === 0) return;
+
+            if(confirm("Tem certeza que deseja limpar toda a lista? Os dados não salvos serão perdidos.")) {
+                estoque = {};
+                document.getElementById('result-list').innerHTML = '';
+                atualizarTotais();
+            }
+        }
+
         function baixarCSV() {
             if (Object.keys(estoque).length === 0) {
-                alert("Nada para exportar!");
+                alert("Nenhum dado para exportar.");
                 return;
             }
 
             let csvContent = "data:text/csv;charset=utf-8,";
-            csvContent += "Codigo;Quantidade;Ultima_Leitura\n"; // Cabeçalho (usando ; para Excel abrir melhor)
+            csvContent += "Codigo;Quantidade;Ultima_Leitura\n";
 
             for (const [codigo, dados] of Object.entries(estoque)) {
                 csvContent += `${codigo};${dados.qtd};${dados.lastTime}\n`;
@@ -196,7 +221,11 @@
             const encodedUri = encodeURI(csvContent);
             const link = document.createElement("a");
             link.setAttribute("href", encodedUri);
-            link.setAttribute("download", "estoque_acumulado.csv");
+            
+            // Nome do arquivo com data e hora para não sobrescrever
+            const dataStr = new Date().toISOString().slice(0,19).replace(/:/g,"-");
+            link.setAttribute("download", `estoque_${dataStr}.csv`);
+            
             document.body.appendChild(link);
             link.click();
             document.body.removeChild(link);
