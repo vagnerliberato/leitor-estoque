@@ -3,131 +3,164 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Coletor de Dados Pro</title>
+    <title>Scanner EAN-13 Pro</title>
     <script src="https://unpkg.com/html5-qrcode" type="text/javascript"></script>
     <style>
         body { font-family: 'Segoe UI', sans-serif; padding: 15px; text-align: center; background-color: #f4f6f9; color: #333; }
         
-        /* Área da Câmera */
         #reader { width: 100%; max-width: 500px; margin: 0 auto; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 15px rgba(0,0,0,0.1); background: #000; }
         
-        /* Botões */
-        .controls { display: flex; flex-wrap: wrap; justify-content: center; gap: 10px; margin: 20px 0; }
+        /* Controles e Botões */
+        .controls-wrapper { max-width: 500px; margin: 15px auto; }
+
+        .btn-group { display: flex; gap: 8px; margin-bottom: 10px; }
         
-        .btn { padding: 12px 20px; color: white; border: none; border-radius: 8px; cursor: pointer; font-size: 15px; font-weight: 600; flex: 1; min-width: 120px; transition: transform 0.1s; box-shadow: 0 2px 5px rgba(0,0,0,0.2); }
+        .btn { padding: 12px; color: white; border: none; border-radius: 8px; cursor: pointer; font-size: 15px; font-weight: 600; flex: 1; transition: transform 0.1s; box-shadow: 0 2px 4px rgba(0,0,0,0.2); }
         .btn:active { transform: scale(0.96); }
         
         .btn-start { background-color: #28a745; }
-        .btn-stop { background-color: #6c757d; } /* Cinza para parar */
+        .btn-stop { background-color: #6c757d; }
         .btn-csv { background-color: #007bff; }
-        .btn-clear { background-color: #dc3545; } /* Vermelho para limpar */
+        .btn-clear { background-color: #dc3545; } 
+
+        /* Seletor de Foco */
+        .focus-control { margin-bottom: 15px; background: white; padding: 10px; border-radius: 8px; display: flex; align-items: center; justify-content: space-between; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
+        .focus-select { padding: 8px; border-radius: 5px; border: 1px solid #ccc; width: 60%; font-size: 14px; }
 
         /* Estatísticas */
         .stats { display: flex; justify-content: space-around; max-width: 500px; margin: 15px auto; background: white; padding: 15px; border-radius: 10px; box-shadow: 0 2px 8px rgba(0,0,0,0.05); }
         .stat-item { display: flex; flex-direction: column; }
-        .stat-label { font-size: 11px; text-transform: uppercase; letter-spacing: 1px; color: #888; }
+        .stat-label { font-size: 11px; text-transform: uppercase; color: #888; }
         .stat-value { font-size: 24px; font-weight: 800; color: #2c3e50; }
 
         /* Lista */
-        #result-list { list-style: none; padding: 0; margin-top: 20px; max-width: 500px; margin-left: auto; margin-right: auto; text-align: left; }
+        #result-list { list-style: none; padding: 0; margin-top: 20px; max-width: 500px; margin: 0 auto; text-align: left; }
         
         .item-row { background: white; border-bottom: 1px solid #f0f0f0; padding: 12px 15px; display: flex; justify-content: space-between; align-items: center; border-radius: 8px; margin-bottom: 8px; box-shadow: 0 1px 3px rgba(0,0,0,0.05); }
         
-        .updated { animation: flashGreen 1s; }
+        .updated { animation: flashGreen 0.8s; }
+        @keyframes flashGreen { 0% { background-color: #d4edda; } 100% { background-color: white; } }
         
-        @keyframes flashGreen {
-            0% { background-color: #d4edda; }
-            100% { background-color: white; }
-        }
-        
-        .code-text { font-weight: bold; font-size: 16px; color: #333; display: block; }
+        .code-text { font-weight: bold; font-size: 16px; display: block; }
         .code-time { font-size: 12px; color: #999; }
-        .qty-badge { background-color: #eef2f7; color: #007bff; padding: 6px 14px; border-radius: 20px; font-weight: 800; font-size: 16px; border: 1px solid #dee2e6; }
+        .qty-badge { background-color: #eef2f7; color: #007bff; padding: 6px 14px; border-radius: 20px; font-weight: 800; }
     </style>
 </head>
 <body>
 
-    <h3>📦 Coletor de Estoque</h3>
+    <h3>📦 Scanner EAN-13</h3>
     
     <div id="reader"></div>
     
-    <div class="stats">
-        <div class="stat-item">
-            <span class="stat-label">Produtos</span>
-            <span class="stat-value" id="count-unique">0</span>
+    <div class="controls-wrapper">
+        <div class="focus-control" id="focus-panel" style="display:none;">
+            <label for="focusMode"><strong>Modo de Foco:</strong></label>
+            <select id="focusMode" class="focus-select" onchange="mudarFoco()">
+                <option value="continuous">Contínuo (Automático)</option>
+                <option value="single-shot">Foco Único</option>
+                <option value="macro">Macro (Perto)</option>
+            </select>
         </div>
-        <div class="stat-item">
-            <span class="stat-label">Total Itens</span>
-            <span class="stat-value" id="count-total">0</span>
-        </div>
-    </div>
 
-    <div class="controls">
-        <button id="start-btn" class="btn btn-start">📷 Ler Código</button>
-        <button id="stop-btn" class="btn btn-stop" style="display:none;">⏹ Parar Câmera</button>
-        <button onclick="baixarCSV()" class="btn btn-csv">📥 Excel/CSV</button>
-        <button onclick="limparLista()" class="btn btn-clear">🗑️ Limpar</button>
+        <div class="stats">
+            <div class="stat-item"><span class="stat-label">Produtos</span><span class="stat-value" id="count-unique">0</span></div>
+            <div class="stat-item"><span class="stat-label">Volumes</span><span class="stat-value" id="count-total">0</span></div>
+        </div>
+
+        <div class="btn-group">
+            <button id="start-btn" class="btn btn-start">📷 Iniciar</button>
+            <button id="stop-btn" class="btn btn-stop" style="display:none;">⏹ Parar</button>
+        </div>
+        <div class="btn-group">
+            <button onclick="baixarCSV()" class="btn btn-csv">📥 Baixar CSV</button>
+            <button onclick="limparLista()" class="btn btn-clear">🗑️ Limpar</button>
+        </div>
     </div>
 
     <ul id="result-list"></ul>
 
     <script>
+        // CONFIGURAÇÃO: Apenas EAN_13
+        const formatsToSupport = [ Html5QrcodeSupportedFormats.EAN_13 ];
         const html5QrCode = new Html5Qrcode("reader");
-        let estoque = {}; 
-        let isScanning = false;
         
-        // CONFIGURAÇÃO DO SCANNER E FOCO
+        let estoque = {}; 
+        let currentTrack = null; // Para controlar a câmera ativa
+
         const config = { 
             fps: 10, 
-            qrbox: { width: 250, height: 250 },
-            aspectRatio: 1.0
-        };
-
-        // Solicita foco contínuo nas constraints de vídeo
-        const videoConstraints = {
-            facingMode: "environment",
-            focusMode: "continuous" // Tenta forçar o foco automático contínuo
+            qrbox: { width: 250, height: 150 }, // Retângulo mais achatado para código de barras
+            formatsToSupport: formatsToSupport 
         };
 
         document.getElementById('start-btn').addEventListener('click', () => {
             Html5Qrcode.getCameras().then(devices => {
                 if (devices && devices.length) {
+                    const cameraId = devices.length > 1 ? devices[1].id : devices[0].id;
+                    
+                    // Configuração inicial da câmera
+                    const cameraConfig = { 
+                        deviceId: cameraId,
+                        // Tenta iniciar com foco contínuo por padrão
+                        advanced: [{ focusMode: "continuous" }] 
+                    };
+
                     html5QrCode.start(
-                        { facingMode: "environment" }, // Usa constraints padrão + config interna
-                        config,
+                        cameraConfig, 
+                        config, 
                         onScanSuccess
                     ).then(() => {
-                        // Tenta aplicar o foco contínuo APÓS iniciar (melhor compatibilidade)
-                        aplicarFocoContinuo();
                         toggleButtons(true);
+                        capturarTrackDaCamera();
                     });
                 } else {
-                    alert("Nenhuma câmera encontrada.");
+                    alert("Câmera não encontrada.");
                 }
-            }).catch(err => alert("Erro ao acessar câmera: " + err));
+            }).catch(err => alert("Erro: " + err));
         });
 
-        // Função auxiliar para aplicar settings de vídeo avançados
-        function aplicarFocoContinuo() {
-            // Nota: Nem todos os navegadores suportam 'applyConstraints'
-            // O código abaixo é uma tentativa de "Melhor Esforço"
+        // Função para pegar o controle da câmera (track) e habilitar o menu de foco
+        function capturarTrackDaCamera() {
             try {
-                const track = html5QrCode.getRunningTrack();
-                if (track) {
-                    const capabilities = track.getCapabilities();
-                    if (capabilities.focusMode) {
-                        track.applyConstraints({
-                            advanced: [{ focusMode: "continuous" }]
-                        });
-                    }
+                // Tenta obter o stream de vídeo ativo
+                currentTrack = html5QrCode.getRunningTrack();
+                const capabilities = currentTrack.getCapabilities();
+
+                // Verifica se a câmera suporta mudança de foco
+                if (capabilities.focusMode && capabilities.focusMode.length > 0) {
+                    // Mostra o menu de foco apenas se suportado
+                    document.getElementById('focus-panel').style.display = 'flex';
+                    
+                    // Atualiza o select com o que a câmera realmente suporta (opcional, mas evita erros)
+                    // Aqui mantemos as opções padrão, mas o navegador pode ignorar se não suportar.
                 }
             } catch (e) {
-                console.log("Foco manual não suportado pelo navegador, usando padrão.", e);
+                console.log("Câmera não suporta ajustes avançados.", e);
+            }
+        }
+
+        // Função chamada quando o usuário muda o select
+        async function mudarFoco() {
+            if (!currentTrack) return;
+            
+            const mode = document.getElementById('focusMode').value;
+            
+            try {
+                await currentTrack.applyConstraints({
+                    advanced: [{ focusMode: mode }]
+                });
+                console.log("Foco alterado para: " + mode);
+            } catch (err) {
+                console.warn("Não foi possível aplicar o foco: " + mode, err);
+                alert("Esta câmera não suporta o modo: " + mode);
             }
         }
 
         document.getElementById('stop-btn').addEventListener('click', () => {
-            html5QrCode.stop().then(() => toggleButtons(false));
+            html5QrCode.stop().then(() => {
+                toggleButtons(false);
+                document.getElementById('focus-panel').style.display = 'none';
+            });
         });
 
         function toggleButtons(scanning) {
@@ -135,10 +168,15 @@
             document.getElementById('stop-btn').style.display = scanning ? 'inline-block' : 'none';
         }
 
-        function onScanSuccess(decodedText) {
-            html5QrCode.pause(); // Pausa para processar
-            
-            const dataHora = new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+        function onScanSuccess(decodedText, decodedResult) {
+            // Verifica duplicidade E se o formato é realmente EAN_13 (redundância de segurança)
+            if (decodedResult.result.format && decodedResult.result.format.formatName !== "EAN_13") {
+                console.log("Ignorado formato: " + decodedResult.result.format.formatName);
+                return;
+            }
+
+            html5QrCode.pause(); 
+            const dataHora = new Date().toLocaleTimeString('pt-BR');
 
             if (estoque[decodedText]) {
                 estoque[decodedText].qtd += 1;
@@ -150,9 +188,7 @@
             }
 
             atualizarTotais();
-
-            // Retoma mais rápido agora
-            setTimeout(() => html5QrCode.resume(), 800);
+            setTimeout(() => html5QrCode.resume(), 600); // Retoma rápido
         }
 
         function adicionarVisualRow(codigo) {
@@ -164,7 +200,7 @@
             li.innerHTML = `
                 <div class="code-info">
                     <span class="code-text">${codigo}</span>
-                    <span class="code-time">Lido às: <span id="time-${codigo}">${estoque[codigo].lastTime}</span></span>
+                    <span class="code-time">${estoque[codigo].lastTime}</span>
                 </div>
                 <div class="qty-badge" id="qty-${codigo}">1</div>
             `;
@@ -177,28 +213,20 @@
 
             if(highlight) {
                 const row = document.getElementById(`row-${codigo}`);
-                
-                // Reinicia a animação CSS removendo e adicionando a classe
                 row.classList.remove('updated');
-                void row.offsetWidth; // Força o reflow (truque do CSS)
+                void row.offsetWidth; 
                 row.classList.add('updated');
-
-                const list = document.getElementById('result-list');
-                list.prepend(row);
+                document.getElementById('result-list').prepend(row);
             }
         }
 
         function atualizarTotais() {
-            const unicos = Object.keys(estoque).length;
-            const total = Object.values(estoque).reduce((acc, item) => acc + item.qtd, 0);
-            document.getElementById('count-unique').innerText = unicos;
-            document.getElementById('count-total').innerText = total;
+            document.getElementById('count-unique').innerText = Object.keys(estoque).length;
+            document.getElementById('count-total').innerText = Object.values(estoque).reduce((a, b) => a + b.qtd, 0);
         }
 
         function limparLista() {
-            if(Object.keys(estoque).length === 0) return;
-
-            if(confirm("Tem certeza que deseja limpar toda a lista? Os dados não salvos serão perdidos.")) {
+            if(confirm("Limpar toda a lista?")) {
                 estoque = {};
                 document.getElementById('result-list').innerHTML = '';
                 atualizarTotais();
@@ -206,26 +234,13 @@
         }
 
         function baixarCSV() {
-            if (Object.keys(estoque).length === 0) {
-                alert("Nenhum dado para exportar.");
-                return;
-            }
-
-            let csvContent = "data:text/csv;charset=utf-8,";
-            csvContent += "Codigo;Quantidade;Ultima_Leitura\n";
-
-            for (const [codigo, dados] of Object.entries(estoque)) {
-                csvContent += `${codigo};${dados.qtd};${dados.lastTime}\n`;
-            }
-
-            const encodedUri = encodeURI(csvContent);
+            if (Object.keys(estoque).length === 0) { alert("Lista vazia!"); return; }
+            let csv = "data:text/csv;charset=utf-8,Codigo;Quantidade;Hora\n";
+            for (const [c, d] of Object.entries(estoque)) csv += `${c};${d.qtd};${d.lastTime}\n`;
+            
             const link = document.createElement("a");
-            link.setAttribute("href", encodedUri);
-            
-            // Nome do arquivo com data e hora para não sobrescrever
-            const dataStr = new Date().toISOString().slice(0,19).replace(/:/g,"-");
-            link.setAttribute("download", `estoque_${dataStr}.csv`);
-            
+            link.setAttribute("href", encodeURI(csv));
+            link.setAttribute("download", `EAN13_${new Date().toISOString().slice(0,10)}.csv`);
             document.body.appendChild(link);
             link.click();
             document.body.removeChild(link);
