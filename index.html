@@ -3,14 +3,18 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Coletor Pro v3</title>
+    <title>Coletor Pro v4 (Editável)</title>
     <script src="https://unpkg.com/html5-qrcode" type="text/javascript"></script>
     <style>
         body { font-family: 'Segoe UI', sans-serif; padding: 15px; text-align: center; background-color: #f4f6f9; color: #333; }
         
-        /* Inputs */
+        /* Inputs de Entrada (Topo) */
         .input-group { background: white; padding: 15px; border-radius: 10px; box-shadow: 0 2px 5px rgba(0,0,0,0.05); margin-bottom: 15px; text-align: left; }
         .input-group label { display: block; font-size: 12px; font-weight: bold; margin-bottom: 5px; color: #555; }
+        
+        /* Classe para forçar maiúsculo visualmente */
+        .uppercase-input { text-transform: uppercase; }
+        
         .form-control { width: 100%; padding: 10px; margin-bottom: 10px; border: 1px solid #ddd; border-radius: 5px; font-size: 16px; box-sizing: border-box; }
         .row { display: flex; gap: 10px; }
         .col { flex: 1; }
@@ -18,7 +22,7 @@
         /* Câmera */
         #reader { width: 100%; max-width: 500px; margin: 0 auto; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 15px rgba(0,0,0,0.1); background: #000; }
         
-        /* Botões Gerais */
+        /* Botões */
         .controls { display: flex; flex-wrap: wrap; justify-content: center; gap: 10px; margin: 20px 0; }
         .btn { padding: 12px 20px; color: white; border: none; border-radius: 8px; cursor: pointer; font-size: 15px; font-weight: 600; flex: 1; min-width: 100px; box-shadow: 0 2px 4px rgba(0,0,0,0.2); }
         .btn-start { background-color: #28a745; }
@@ -26,42 +30,56 @@
         .btn-csv { background-color: #007bff; }
         .btn-clear { background-color: #dc3545; }
 
-        /* Lista de Itens */
+        /* Lista */
         #result-list { list-style: none; padding: 0; margin-top: 20px; max-width: 500px; margin: 0 auto; text-align: left; }
         .item-row { background: white; border-bottom: 1px solid #f0f0f0; padding: 10px 15px; display: flex; justify-content: space-between; align-items: center; border-radius: 8px; margin-bottom: 8px; box-shadow: 0 1px 3px rgba(0,0,0,0.05); }
         
-        /* Animação */
         .updated { animation: flashGreen 1s; }
         @keyframes flashGreen { 0% { background-color: #d4edda; } 100% { background-color: white; } }
         
-        /* Detalhes do Item */
         .item-content { flex-grow: 1; margin-right: 10px; }
         .item-desc { font-weight: bold; font-size: 15px; color: #222; display: block; }
         .item-meta { font-size: 12px; color: #666; margin-top: 2px; }
         
-        /* Badge de Quantidade e Botão Remover */
-        .right-actions { display: flex; align-items: center; gap: 10px; }
-        .qty-badge { background-color: #eef2f7; color: #007bff; padding: 5px 12px; border-radius: 20px; font-weight: 800; font-size: 16px; min-width: 25px; text-align: center; }
+        /* Ações na Direita */
+        .right-actions { display: flex; align-items: center; gap: 8px; }
         
+        /* Input de Quantidade Editável */
+        .qty-input {
+            width: 60px;
+            padding: 5px;
+            text-align: center;
+            border: 1px solid #007bff;
+            border-radius: 5px;
+            font-weight: bold;
+            font-size: 16px;
+            color: #007bff;
+            background-color: #eef2f7;
+        }
+        /* Remove setinhas do input number */
+        .qty-input::-webkit-outer-spin-button,
+        .qty-input::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+        .qty-input { -moz-appearance: textfield; }
+
         .btn-remove-item {
             background-color: #fff0f0; border: 1px solid #ffcccc; color: #dc3545;
-            width: 32px; height: 32px; border-radius: 50%; font-size: 16px; cursor: pointer;
+            width: 35px; height: 35px; border-radius: 50%; font-size: 16px; cursor: pointer;
             display: flex; align-items: center; justify-content: center; padding: 0;
         }
     </style>
 </head>
 <body>
 
-    <h3>📦 Coletor de Dados</h3>
+    <h3>📦 Coletor Editável</h3>
 
     <div class="input-group">
-        <label>Descrição do Produto:</label>
-        <input type="text" id="prod-desc" class="form-control" placeholder="Ex: Parafuso Inox">
+        <label>Descrição (Maiúsculo Automático):</label>
+        <input type="text" id="prod-desc" class="form-control uppercase-input" placeholder="Ex: PARAFUSO INOX">
         
         <div class="row">
             <div class="col">
                 <label>Unidade:</label>
-                <input type="text" id="prod-unit" class="form-control" placeholder="Ex: UN">
+                <input type="text" id="prod-unit" class="form-control uppercase-input" placeholder="Ex: UN">
             </div>
             <div class="col"></div>
         </div>
@@ -78,7 +96,7 @@
     </div>
 
     <div style="margin-bottom: 10px; font-weight: bold;">
-        Itens lidos: <span id="total-items">0</span>
+        Total de Itens: <span id="total-items" style="color: #007bff; font-size: 1.2em;">0</span>
     </div>
 
     <ul id="result-list"></ul>
@@ -117,8 +135,11 @@
 
             const inputDesc = document.getElementById('prod-desc');
             const inputUnit = document.getElementById('prod-unit');
-            const descDigitada = inputDesc.value.trim();
-            const unitDigitada = inputUnit.value.trim();
+            
+            // FORÇA MAIÚSCULO NO JAVASCRIPT (.toUpperCase())
+            const descDigitada = inputDesc.value.trim().toUpperCase();
+            const unitDigitada = inputUnit.value.trim().toUpperCase();
+            
             const dataHora = new Date().toLocaleTimeString('pt-BR');
 
             if (estoque[decodedText]) {
@@ -129,7 +150,7 @@
                 atualizarVisualRow(decodedText, true);
             } else {
                 estoque[decodedText] = {
-                    desc: descDigitada || "Sem descrição",
+                    desc: descDigitada || "SEM DESCRIÇÃO",
                     unit: unitDigitada || "UN",
                     qtd: 1,
                     lastTime: dataHora
@@ -151,26 +172,49 @@
             li.className = 'item-row';
             li.id = 'row-' + codigo;
             
-            // Note o botão 'onclick="removerItem(...)"' adicionado abaixo
+            // Aqui substituímos o div fixo por um INPUT TYPE="NUMBER"
+            // Adicionamos o evento "onchange" para atualizar o objeto estoque quando o usuário digitar
             li.innerHTML = `
                 <div class="item-content">
                     <span class="item-desc" id="desc-${codigo}">${item.desc}</span>
                     <div class="item-meta">
-                        Cód: ${codigo} | Un: <span id="unit-${codigo}">${item.unit}</span> | <span id="time-${codigo}">${item.lastTime}</span>
+                        Cód: ${codigo} | Un: <span id="unit-${codigo}">${item.unit}</span>
                     </div>
                 </div>
                 <div class="right-actions">
-                    <div class="qty-badge" id="qty-${codigo}">1</div>
+                    <input type="number" 
+                           class="qty-input" 
+                           id="qty-${codigo}" 
+                           value="${item.qtd}" 
+                           min="1"
+                           onchange="atualizarQuantidadeManual('${codigo}', this.value)"
+                    >
                     <button class="btn-remove-item" onclick="removerItem('${codigo}')">❌</button>
                 </div>
             `;
             list.prepend(li);
         }
 
+        // Função nova para capturar a edição manual da quantidade
+        function atualizarQuantidadeManual(codigo, novaQtd) {
+            const qtd = parseInt(novaQtd);
+            if (qtd && qtd > 0) {
+                estoque[codigo].qtd = qtd;
+                atualizarTotais();
+            } else {
+                // Se o usuário apagar tudo ou colocar 0, volta para 1 ou mantém o anterior
+                alert("Quantidade inválida.");
+                document.getElementById(`qty-${codigo}`).value = estoque[codigo].qtd;
+            }
+        }
+
         function atualizarVisualRow(codigo, highlight) {
             const item = estoque[codigo];
-            document.getElementById(`qty-${codigo}`).innerText = item.qtd;
-            document.getElementById(`time-${codigo}`).innerText = item.lastTime;
+            
+            // Atualiza o valor do INPUT, não o innerText
+            const inputQtd = document.getElementById(`qty-${codigo}`);
+            if(inputQtd) inputQtd.value = item.qtd;
+            
             document.getElementById(`desc-${codigo}`).innerText = item.desc;
             document.getElementById(`unit-${codigo}`).innerText = item.unit;
 
@@ -183,17 +227,11 @@
             }
         }
 
-        // --- NOVA FUNÇÃO DE REMOVER ---
         function removerItem(codigo) {
-            if(confirm(`Deseja remover o item: ${estoque[codigo].desc}?`)) {
-                // 1. Remove do objeto de dados
+            if(confirm(`Remover item: ${estoque[codigo].desc}?`)) {
                 delete estoque[codigo];
-                
-                // 2. Remove da tela (HTML)
                 const row = document.getElementById('row-' + codigo);
                 if (row) row.remove();
-                
-                // 3. Recalcula totais
                 atualizarTotais();
             }
         }
