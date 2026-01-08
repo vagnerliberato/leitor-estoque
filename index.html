@@ -3,164 +3,106 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Scanner EAN-13 Pro</title>
+    <title>Coletor com Detalhes</title>
     <script src="https://unpkg.com/html5-qrcode" type="text/javascript"></script>
     <style>
         body { font-family: 'Segoe UI', sans-serif; padding: 15px; text-align: center; background-color: #f4f6f9; color: #333; }
         
+        /* Área de Inputs */
+        .input-group { background: white; padding: 15px; border-radius: 10px; box-shadow: 0 2px 5px rgba(0,0,0,0.05); margin-bottom: 15px; text-align: left; }
+        .input-group label { display: block; font-size: 12px; font-weight: bold; margin-bottom: 5px; color: #555; }
+        .form-control { width: 100%; padding: 10px; margin-bottom: 10px; border: 1px solid #ddd; border-radius: 5px; font-size: 16px; box-sizing: border-box; }
+        .row { display: flex; gap: 10px; }
+        .col { flex: 1; }
+
+        /* Área da Câmera */
         #reader { width: 100%; max-width: 500px; margin: 0 auto; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 15px rgba(0,0,0,0.1); background: #000; }
         
-        /* Controles e Botões */
-        .controls-wrapper { max-width: 500px; margin: 15px auto; }
-
-        .btn-group { display: flex; gap: 8px; margin-bottom: 10px; }
-        
-        .btn { padding: 12px; color: white; border: none; border-radius: 8px; cursor: pointer; font-size: 15px; font-weight: 600; flex: 1; transition: transform 0.1s; box-shadow: 0 2px 4px rgba(0,0,0,0.2); }
-        .btn:active { transform: scale(0.96); }
-        
+        /* Botões */
+        .controls { display: flex; flex-wrap: wrap; justify-content: center; gap: 10px; margin: 20px 0; }
+        .btn { padding: 12px 20px; color: white; border: none; border-radius: 8px; cursor: pointer; font-size: 15px; font-weight: 600; flex: 1; min-width: 100px; box-shadow: 0 2px 4px rgba(0,0,0,0.2); }
         .btn-start { background-color: #28a745; }
         .btn-stop { background-color: #6c757d; }
         .btn-csv { background-color: #007bff; }
-        .btn-clear { background-color: #dc3545; } 
-
-        /* Seletor de Foco */
-        .focus-control { margin-bottom: 15px; background: white; padding: 10px; border-radius: 8px; display: flex; align-items: center; justify-content: space-between; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
-        .focus-select { padding: 8px; border-radius: 5px; border: 1px solid #ccc; width: 60%; font-size: 14px; }
-
-        /* Estatísticas */
-        .stats { display: flex; justify-content: space-around; max-width: 500px; margin: 15px auto; background: white; padding: 15px; border-radius: 10px; box-shadow: 0 2px 8px rgba(0,0,0,0.05); }
-        .stat-item { display: flex; flex-direction: column; }
-        .stat-label { font-size: 11px; text-transform: uppercase; color: #888; }
-        .stat-value { font-size: 24px; font-weight: 800; color: #2c3e50; }
+        .btn-clear { background-color: #dc3545; }
 
         /* Lista */
         #result-list { list-style: none; padding: 0; margin-top: 20px; max-width: 500px; margin: 0 auto; text-align: left; }
-        
         .item-row { background: white; border-bottom: 1px solid #f0f0f0; padding: 12px 15px; display: flex; justify-content: space-between; align-items: center; border-radius: 8px; margin-bottom: 8px; box-shadow: 0 1px 3px rgba(0,0,0,0.05); }
-        
-        .updated { animation: flashGreen 0.8s; }
+        .updated { animation: flashGreen 1s; }
         @keyframes flashGreen { 0% { background-color: #d4edda; } 100% { background-color: white; } }
         
-        .code-text { font-weight: bold; font-size: 16px; display: block; }
-        .code-time { font-size: 12px; color: #999; }
-        .qty-badge { background-color: #eef2f7; color: #007bff; padding: 6px 14px; border-radius: 20px; font-weight: 800; }
+        .item-desc { font-weight: bold; font-size: 15px; color: #222; display: block; margin-bottom: 2px; }
+        .item-meta { font-size: 12px; color: #666; }
+        .qty-badge { background-color: #eef2f7; color: #007bff; padding: 6px 14px; border-radius: 20px; font-weight: 800; font-size: 16px; min-width: 30px; text-align: center; }
     </style>
 </head>
 <body>
 
-    <h3>📦 Scanner EAN-13</h3>
+    <h3>📦 Coletor de Dados</h3>
+
+    <div class="input-group">
+        <label>Descrição do Produto:</label>
+        <input type="text" id="prod-desc" class="form-control" placeholder="Ex: Parafuso Inox 10mm">
+        
+        <div class="row">
+            <div class="col">
+                <label>Unidade:</label>
+                <input type="text" id="prod-unit" class="form-control" placeholder="Ex: UN, CX, KG">
+            </div>
+            <div class="col" style="display:flex; align-items:flex-end;">
+                 </div>
+        </div>
+        <small style="color: #888;">Preencha antes de ler. Os campos limparão após a leitura.</small>
+    </div>
     
     <div id="reader"></div>
     
-    <div class="controls-wrapper">
-        <div class="focus-control" id="focus-panel" style="display:none;">
-            <label for="focusMode"><strong>Modo de Foco:</strong></label>
-            <select id="focusMode" class="focus-select" onchange="mudarFoco()">
-                <option value="continuous">Contínuo (Automático)</option>
-                <option value="single-shot">Foco Único</option>
-                <option value="macro">Macro (Perto)</option>
-            </select>
-        </div>
+    <div class="controls">
+        <button id="start-btn" class="btn btn-start">📷 Ler Código</button>
+        <button id="stop-btn" class="btn btn-stop" style="display:none;">⏹ Parar</button>
+        <button onclick="baixarCSV()" class="btn btn-csv">📥 Baixar CSV</button>
+        <button onclick="limparLista()" class="btn btn-clear">🗑️ Limpar</button>
+    </div>
 
-        <div class="stats">
-            <div class="stat-item"><span class="stat-label">Produtos</span><span class="stat-value" id="count-unique">0</span></div>
-            <div class="stat-item"><span class="stat-label">Volumes</span><span class="stat-value" id="count-total">0</span></div>
-        </div>
-
-        <div class="btn-group">
-            <button id="start-btn" class="btn btn-start">📷 Iniciar</button>
-            <button id="stop-btn" class="btn btn-stop" style="display:none;">⏹ Parar</button>
-        </div>
-        <div class="btn-group">
-            <button onclick="baixarCSV()" class="btn btn-csv">📥 Baixar CSV</button>
-            <button onclick="limparLista()" class="btn btn-clear">🗑️ Limpar</button>
-        </div>
+    <div style="margin-bottom: 10px; font-weight: bold;">
+        Itens lidos: <span id="total-items">0</span>
     </div>
 
     <ul id="result-list"></ul>
 
     <script>
-        // CONFIGURAÇÃO: Apenas EAN_13
-        const formatsToSupport = [ Html5QrcodeSupportedFormats.EAN_13 ];
         const html5QrCode = new Html5Qrcode("reader");
-        
         let estoque = {}; 
-        let currentTrack = null; // Para controlar a câmera ativa
-
-        const config = { 
-            fps: 10, 
-            qrbox: { width: 250, height: 150 }, // Retângulo mais achatado para código de barras
-            formatsToSupport: formatsToSupport 
-        };
+        
+        // Configurações originais estáveis
+        const config = { fps: 10, qrbox: { width: 250, height: 250 } };
+        const videoConstraints = { facingMode: "environment", focusMode: "continuous" };
 
         document.getElementById('start-btn').addEventListener('click', () => {
             Html5Qrcode.getCameras().then(devices => {
                 if (devices && devices.length) {
-                    const cameraId = devices.length > 1 ? devices[1].id : devices[0].id;
-                    
-                    // Configuração inicial da câmera
-                    const cameraConfig = { 
-                        deviceId: cameraId,
-                        // Tenta iniciar com foco contínuo por padrão
-                        advanced: [{ focusMode: "continuous" }] 
-                    };
-
                     html5QrCode.start(
-                        cameraConfig, 
-                        config, 
+                        { facingMode: "environment" },
+                        config,
                         onScanSuccess
                     ).then(() => {
+                        aplicarFocoContinuo();
                         toggleButtons(true);
-                        capturarTrackDaCamera();
                     });
-                } else {
-                    alert("Câmera não encontrada.");
-                }
+                } else { alert("Câmera não encontrada."); }
             }).catch(err => alert("Erro: " + err));
         });
 
-        // Função para pegar o controle da câmera (track) e habilitar o menu de foco
-        function capturarTrackDaCamera() {
+        function aplicarFocoContinuo() {
             try {
-                // Tenta obter o stream de vídeo ativo
-                currentTrack = html5QrCode.getRunningTrack();
-                const capabilities = currentTrack.getCapabilities();
-
-                // Verifica se a câmera suporta mudança de foco
-                if (capabilities.focusMode && capabilities.focusMode.length > 0) {
-                    // Mostra o menu de foco apenas se suportado
-                    document.getElementById('focus-panel').style.display = 'flex';
-                    
-                    // Atualiza o select com o que a câmera realmente suporta (opcional, mas evita erros)
-                    // Aqui mantemos as opções padrão, mas o navegador pode ignorar se não suportar.
-                }
-            } catch (e) {
-                console.log("Câmera não suporta ajustes avançados.", e);
-            }
-        }
-
-        // Função chamada quando o usuário muda o select
-        async function mudarFoco() {
-            if (!currentTrack) return;
-            
-            const mode = document.getElementById('focusMode').value;
-            
-            try {
-                await currentTrack.applyConstraints({
-                    advanced: [{ focusMode: mode }]
-                });
-                console.log("Foco alterado para: " + mode);
-            } catch (err) {
-                console.warn("Não foi possível aplicar o foco: " + mode, err);
-                alert("Esta câmera não suporta o modo: " + mode);
-            }
+                const track = html5QrCode.getRunningTrack();
+                if (track) track.applyConstraints({ advanced: [{ focusMode: "continuous" }] });
+            } catch (e) {}
         }
 
         document.getElementById('stop-btn').addEventListener('click', () => {
-            html5QrCode.stop().then(() => {
-                toggleButtons(false);
-                document.getElementById('focus-panel').style.display = 'none';
-            });
+            html5QrCode.stop().then(() => toggleButtons(false));
         });
 
         function toggleButtons(scanning) {
@@ -168,39 +110,61 @@
             document.getElementById('stop-btn').style.display = scanning ? 'inline-block' : 'none';
         }
 
-        function onScanSuccess(decodedText, decodedResult) {
-            // Verifica duplicidade E se o formato é realmente EAN_13 (redundância de segurança)
-            if (decodedResult.result.format && decodedResult.result.format.formatName !== "EAN_13") {
-                console.log("Ignorado formato: " + decodedResult.result.format.formatName);
-                return;
-            }
+        function onScanSuccess(decodedText) {
+            html5QrCode.pause(); // Pausa breve
 
-            html5QrCode.pause(); 
+            // 1. Captura o que foi digitado
+            const inputDesc = document.getElementById('prod-desc');
+            const inputUnit = document.getElementById('prod-unit');
+            
+            const descDigitada = inputDesc.value.trim();
+            const unitDigitada = inputUnit.value.trim();
             const dataHora = new Date().toLocaleTimeString('pt-BR');
 
+            // 2. Lógica de Atualização
             if (estoque[decodedText]) {
+                // Já existe: Incrementa quantidade
                 estoque[decodedText].qtd += 1;
                 estoque[decodedText].lastTime = dataHora;
+                
+                // Só atualiza descrição se o usuário DIGITOU algo novo.
+                // Se o campo estiver vazio (porque limpou), mantém a descrição antiga.
+                if (descDigitada !== "") estoque[decodedText].desc = descDigitada;
+                if (unitDigitada !== "") estoque[decodedText].unit = unitDigitada;
+                
                 atualizarVisualRow(decodedText, true);
             } else {
-                estoque[decodedText] = { qtd: 1, lastTime: dataHora };
+                // Novo Item
+                estoque[decodedText] = {
+                    desc: descDigitada || "Sem descrição", // Se vazio, coloca padrão
+                    unit: unitDigitada || "UN",
+                    qtd: 1,
+                    lastTime: dataHora
+                };
                 adicionarVisualRow(decodedText);
             }
 
+            // 3. LIMPA OS CAMPOS (Conforme solicitado)
+            inputDesc.value = "";
+            inputUnit.value = "";
+
             atualizarTotais();
-            setTimeout(() => html5QrCode.resume(), 600); // Retoma rápido
+            setTimeout(() => html5QrCode.resume(), 1000); // 1s de pausa para dar tempo de ver
         }
 
         function adicionarVisualRow(codigo) {
             const list = document.getElementById('result-list');
+            const item = estoque[codigo];
             const li = document.createElement('li');
             li.className = 'item-row';
             li.id = 'row-' + codigo;
             
             li.innerHTML = `
-                <div class="code-info">
-                    <span class="code-text">${codigo}</span>
-                    <span class="code-time">${estoque[codigo].lastTime}</span>
+                <div style="text-align:left; width: 100%;">
+                    <span class="item-desc" id="desc-${codigo}">${item.desc}</span>
+                    <div class="item-meta">
+                        Cód: ${codigo} | Un: <span id="unit-${codigo}">${item.unit}</span> | <span id="time-${codigo}">${item.lastTime}</span>
+                    </div>
                 </div>
                 <div class="qty-badge" id="qty-${codigo}">1</div>
             `;
@@ -208,25 +172,28 @@
         }
 
         function atualizarVisualRow(codigo, highlight) {
-            document.getElementById(`qty-${codigo}`).innerText = estoque[codigo].qtd;
-            document.getElementById(`time-${codigo}`).innerText = estoque[codigo].lastTime;
+            const item = estoque[codigo];
+            document.getElementById(`qty-${codigo}`).innerText = item.qtd;
+            document.getElementById(`time-${codigo}`).innerText = item.lastTime;
+            document.getElementById(`desc-${codigo}`).innerText = item.desc;
+            document.getElementById(`unit-${codigo}`).innerText = item.unit;
 
             if(highlight) {
                 const row = document.getElementById(`row-${codigo}`);
                 row.classList.remove('updated');
-                void row.offsetWidth; 
+                void row.offsetWidth;
                 row.classList.add('updated');
                 document.getElementById('result-list').prepend(row);
             }
         }
 
         function atualizarTotais() {
-            document.getElementById('count-unique').innerText = Object.keys(estoque).length;
-            document.getElementById('count-total').innerText = Object.values(estoque).reduce((a, b) => a + b.qtd, 0);
+            const total = Object.values(estoque).reduce((acc, item) => acc + item.qtd, 0);
+            document.getElementById('total-items').innerText = total;
         }
 
         function limparLista() {
-            if(confirm("Limpar toda a lista?")) {
+            if(confirm("Deseja apagar toda a lista de leitura?")) {
                 estoque = {};
                 document.getElementById('result-list').innerHTML = '';
                 atualizarTotais();
@@ -235,12 +202,23 @@
 
         function baixarCSV() {
             if (Object.keys(estoque).length === 0) { alert("Lista vazia!"); return; }
-            let csv = "data:text/csv;charset=utf-8,Codigo;Quantidade;Hora\n";
-            for (const [c, d] of Object.entries(estoque)) csv += `${c};${d.qtd};${d.lastTime}\n`;
-            
+
+            let csvContent = "data:text/csv;charset=utf-8,";
+            csvContent += "Codigo;Descricao;Unidade;Quantidade;Ultima_Leitura\n";
+
+            for (const [codigo, dados] of Object.entries(estoque)) {
+                // Aspas na descrição previnem erros se houver ponto e vírgula no texto digitado
+                const descSegura = `"${dados.desc}"`; 
+                csvContent += `${codigo};${descSegura};${dados.unit};${dados.qtd};${dados.lastTime}\n`;
+            }
+
+            const encodedUri = encodeURI(csvContent);
             const link = document.createElement("a");
-            link.setAttribute("href", encodeURI(csv));
-            link.setAttribute("download", `EAN13_${new Date().toISOString().slice(0,10)}.csv`);
+            link.setAttribute("href", encodedUri);
+            
+            const dataStr = new Date().toISOString().slice(0,19).replace(/:/g,"-");
+            link.setAttribute("download", `inventario_${dataStr}.csv`);
+            
             document.body.appendChild(link);
             link.click();
             document.body.removeChild(link);
