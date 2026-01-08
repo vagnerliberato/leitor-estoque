@@ -3,18 +3,15 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Coletor Pro v4 (Editável)</title>
+    <title>Coletor Master v5</title>
     <script src="https://unpkg.com/html5-qrcode" type="text/javascript"></script>
     <style>
-        body { font-family: 'Segoe UI', sans-serif; padding: 15px; text-align: center; background-color: #f4f6f9; color: #333; }
+        body { font-family: 'Segoe UI', Roboto, sans-serif; padding: 10px; text-align: center; background-color: #f4f6f9; color: #333; }
         
-        /* Inputs de Entrada (Topo) */
+        /* Inputs do Topo */
         .input-group { background: white; padding: 15px; border-radius: 10px; box-shadow: 0 2px 5px rgba(0,0,0,0.05); margin-bottom: 15px; text-align: left; }
         .input-group label { display: block; font-size: 12px; font-weight: bold; margin-bottom: 5px; color: #555; }
-        
-        /* Classe para forçar maiúsculo visualmente */
         .uppercase-input { text-transform: uppercase; }
-        
         .form-control { width: 100%; padding: 10px; margin-bottom: 10px; border: 1px solid #ddd; border-radius: 5px; font-size: 16px; box-sizing: border-box; }
         .row { display: flex; gap: 10px; }
         .col { flex: 1; }
@@ -23,8 +20,8 @@
         #reader { width: 100%; max-width: 500px; margin: 0 auto; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 15px rgba(0,0,0,0.1); background: #000; }
         
         /* Botões */
-        .controls { display: flex; flex-wrap: wrap; justify-content: center; gap: 10px; margin: 20px 0; }
-        .btn { padding: 12px 20px; color: white; border: none; border-radius: 8px; cursor: pointer; font-size: 15px; font-weight: 600; flex: 1; min-width: 100px; box-shadow: 0 2px 4px rgba(0,0,0,0.2); }
+        .controls { display: flex; flex-wrap: wrap; justify-content: center; gap: 8px; margin: 15px 0; }
+        .btn { padding: 12px; color: white; border: none; border-radius: 8px; cursor: pointer; font-size: 14px; font-weight: 600; flex: 1; min-width: 90px; box-shadow: 0 2px 4px rgba(0,0,0,0.2); }
         .btn-start { background-color: #28a745; }
         .btn-stop { background-color: #6c757d; }
         .btn-csv { background-color: #007bff; }
@@ -32,71 +29,65 @@
 
         /* Lista */
         #result-list { list-style: none; padding: 0; margin-top: 20px; max-width: 500px; margin: 0 auto; text-align: left; }
-        .item-row { background: white; border-bottom: 1px solid #f0f0f0; padding: 10px 15px; display: flex; justify-content: space-between; align-items: center; border-radius: 8px; margin-bottom: 8px; box-shadow: 0 1px 3px rgba(0,0,0,0.05); }
+        .item-row { background: white; border-bottom: 1px solid #f0f0f0; padding: 10px; display: flex; flex-direction: column; gap: 8px; border-radius: 8px; margin-bottom: 8px; box-shadow: 0 1px 3px rgba(0,0,0,0.05); }
         
         .updated { animation: flashGreen 1s; }
         @keyframes flashGreen { 0% { background-color: #d4edda; } 100% { background-color: white; } }
         
-        .item-content { flex-grow: 1; margin-right: 10px; }
-        .item-desc { font-weight: bold; font-size: 15px; color: #222; display: block; }
-        .item-meta { font-size: 12px; color: #666; margin-top: 2px; }
-        
-        /* Ações na Direita */
-        .right-actions { display: flex; align-items: center; gap: 8px; }
-        
-        /* Input de Quantidade Editável */
-        .qty-input {
-            width: 60px;
-            padding: 5px;
-            text-align: center;
-            border: 1px solid #007bff;
-            border-radius: 5px;
-            font-weight: bold;
-            font-size: 16px;
-            color: #007bff;
-            background-color: #eef2f7;
+        /* Layout da Linha do Item */
+        .row-top { display: flex; justify-content: space-between; align-items: center; width: 100%; }
+        .row-bottom { display: flex; align-items: center; gap: 5px; width: 100%; }
+
+        /* Estilo dos Inputs na Lista */
+        .edit-code { 
+            font-family: 'Courier New', monospace; 
+            font-weight: bold; 
+            border: 1px solid #ccc; 
+            padding: 5px; 
+            width: 130px; 
+            border-radius: 4px;
+            font-size: 14px;
         }
-        /* Remove setinhas do input number */
-        .qty-input::-webkit-outer-spin-button,
-        .qty-input::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
-        .qty-input { -moz-appearance: textfield; }
+        
+        .item-desc { font-weight: bold; font-size: 15px; color: #222; margin-bottom: 2px; display: block;}
+        .item-unit { font-size: 12px; color: #666; font-weight: bold; background: #eee; padding: 2px 6px; border-radius: 4px; }
+        
+        .qty-input {
+            width: 60px; padding: 8px; text-align: center; border: 1px solid #007bff; border-radius: 5px; font-weight: bold; font-size: 16px; color: #007bff; background-color: #fbfdff;
+        }
+        .qty-input:focus, .edit-code:focus { border-color: #28a745; outline: none; background-color: #fff; }
 
         .btn-remove-item {
             background-color: #fff0f0; border: 1px solid #ffcccc; color: #dc3545;
-            width: 35px; height: 35px; border-radius: 50%; font-size: 16px; cursor: pointer;
-            display: flex; align-items: center; justify-content: center; padding: 0;
+            width: 36px; height: 36px; border-radius: 5px; font-size: 18px; cursor: pointer; margin-left: auto;
         }
     </style>
 </head>
 <body>
 
-    <h3>📦 Coletor Editável</h3>
+    <h3>📦 Coletor Master v5</h3>
 
     <div class="input-group">
         <label>Descrição (Maiúsculo Automático):</label>
         <input type="text" id="prod-desc" class="form-control uppercase-input" placeholder="Ex: PARAFUSO INOX">
-        
         <div class="row">
-            <div class="col">
-                <label>Unidade:</label>
-                <input type="text" id="prod-unit" class="form-control uppercase-input" placeholder="Ex: UN">
-            </div>
+            <div class="col"><label>Unidade:</label><input type="text" id="prod-unit" class="form-control uppercase-input" placeholder="Ex: UN"></div>
             <div class="col"></div>
         </div>
-        <small style="color: #888;">Preencha antes de ler o código.</small>
+        <small style="color: #888;">Preencha antes de ler.</small>
     </div>
     
     <div id="reader"></div>
     
     <div class="controls">
-        <button id="start-btn" class="btn btn-start">📷 Ler Código</button>
+        <button id="start-btn" class="btn btn-start">📷 Ler</button>
         <button id="stop-btn" class="btn btn-stop" style="display:none;">⏹ Parar</button>
-        <button onclick="baixarCSV()" class="btn btn-csv">📥 Baixar CSV</button>
-        <button onclick="limparLista()" class="btn btn-clear">🗑️ Limpar Tudo</button>
+        <button onclick="baixarCSV()" class="btn btn-csv">📥 Baixar</button>
+        <button onclick="limparLista()" class="btn btn-clear">🗑️ Limpar</button>
     </div>
 
     <div style="margin-bottom: 10px; font-weight: bold;">
-        Total de Itens: <span id="total-items" style="color: #007bff; font-size: 1.2em;">0</span>
+        Total Itens: <span id="total-items" style="color: #007bff; font-size: 1.2em;">0</span>
     </div>
 
     <ul id="result-list"></ul>
@@ -110,13 +101,8 @@
         document.getElementById('start-btn').addEventListener('click', () => {
             Html5Qrcode.getCameras().then(devices => {
                 if (devices && devices.length) {
-                    html5QrCode.start(
-                        { facingMode: "environment" },
-                        config,
-                        onScanSuccess
-                    ).then(() => {
-                        toggleButtons(true);
-                    });
+                    html5QrCode.start({ facingMode: "environment" }, config, onScanSuccess)
+                        .then(() => toggleButtons(true));
                 } else { alert("Câmera não encontrada."); }
             }).catch(err => alert("Erro: " + err));
         });
@@ -135,11 +121,8 @@
 
             const inputDesc = document.getElementById('prod-desc');
             const inputUnit = document.getElementById('prod-unit');
-            
-            // FORÇA MAIÚSCULO NO JAVASCRIPT (.toUpperCase())
             const descDigitada = inputDesc.value.trim().toUpperCase();
             const unitDigitada = inputUnit.value.trim().toUpperCase();
-            
             const dataHora = new Date().toLocaleTimeString('pt-BR');
 
             if (estoque[decodedText]) {
@@ -160,11 +143,11 @@
 
             inputDesc.value = "";
             inputUnit.value = "";
-
             atualizarTotais();
             setTimeout(() => html5QrCode.resume(), 1000);
         }
 
+        // --- GERAÇÃO DA LINHA VISUAL ---
         function adicionarVisualRow(codigo) {
             const list = document.getElementById('result-list');
             const item = estoque[codigo];
@@ -172,103 +155,24 @@
             li.className = 'item-row';
             li.id = 'row-' + codigo;
             
-            // Aqui substituímos o div fixo por um INPUT TYPE="NUMBER"
-            // Adicionamos o evento "onchange" para atualizar o objeto estoque quando o usuário digitar
+            // Layout: Topo (Descrição) | Baixo (Código Editável, Unidade, Qtd Editável, Botão Remover)
             li.innerHTML = `
-                <div class="item-content">
+                <div class="row-top">
                     <span class="item-desc" id="desc-${codigo}">${item.desc}</span>
-                    <div class="item-meta">
-                        Cód: ${codigo} | Un: <span id="unit-${codigo}">${item.unit}</span>
-                    </div>
+                    <span class="item-unit" id="unit-${codigo}">${item.unit}</span>
                 </div>
-                <div class="right-actions">
-                    <input type="number" 
-                           class="qty-input" 
-                           id="qty-${codigo}" 
-                           value="${item.qtd}" 
-                           min="1"
-                           onchange="atualizarQuantidadeManual('${codigo}', this.value)"
-                    >
-                    <button class="btn-remove-item" onclick="removerItem('${codigo}')">❌</button>
+                <div class="row-bottom">
+                    <input type="text" class="edit-code" value="${codigo}" 
+                           onchange="editarCodigo('${codigo}', this)">
+                    
+                    <input type="number" class="qty-input" id="qty-${codigo}" value="${item.qtd}" min="1"
+                           onchange="atualizarQtd('${codigo}', this.value)">
+                    
+                    <button class="btn-remove-item" onclick="removerItem('${codigo}')">🗑</button>
                 </div>
             `;
             list.prepend(li);
         }
 
-        // Função nova para capturar a edição manual da quantidade
-        function atualizarQuantidadeManual(codigo, novaQtd) {
-            const qtd = parseInt(novaQtd);
-            if (qtd && qtd > 0) {
-                estoque[codigo].qtd = qtd;
-                atualizarTotais();
-            } else {
-                // Se o usuário apagar tudo ou colocar 0, volta para 1 ou mantém o anterior
-                alert("Quantidade inválida.");
-                document.getElementById(`qty-${codigo}`).value = estoque[codigo].qtd;
-            }
-        }
-
-        function atualizarVisualRow(codigo, highlight) {
-            const item = estoque[codigo];
-            
-            // Atualiza o valor do INPUT, não o innerText
-            const inputQtd = document.getElementById(`qty-${codigo}`);
-            if(inputQtd) inputQtd.value = item.qtd;
-            
-            document.getElementById(`desc-${codigo}`).innerText = item.desc;
-            document.getElementById(`unit-${codigo}`).innerText = item.unit;
-
-            if(highlight) {
-                const row = document.getElementById(`row-${codigo}`);
-                row.classList.remove('updated');
-                void row.offsetWidth;
-                row.classList.add('updated');
-                document.getElementById('result-list').prepend(row);
-            }
-        }
-
-        function removerItem(codigo) {
-            if(confirm(`Remover item: ${estoque[codigo].desc}?`)) {
-                delete estoque[codigo];
-                const row = document.getElementById('row-' + codigo);
-                if (row) row.remove();
-                atualizarTotais();
-            }
-        }
-
-        function atualizarTotais() {
-            const total = Object.values(estoque).reduce((acc, item) => acc + item.qtd, 0);
-            document.getElementById('total-items').innerText = total;
-        }
-
-        function limparLista() {
-            if(confirm("Deseja apagar TODA a lista?")) {
-                estoque = {};
-                document.getElementById('result-list').innerHTML = '';
-                atualizarTotais();
-            }
-        }
-
-        function baixarCSV() {
-            if (Object.keys(estoque).length === 0) { alert("Lista vazia!"); return; }
-
-            let csvContent = "data:text/csv;charset=utf-8,";
-            csvContent += "Codigo;Descricao;Unidade;Quantidade;Ultima_Leitura\n";
-
-            for (const [codigo, dados] of Object.entries(estoque)) {
-                const descSegura = `"${dados.desc}"`; 
-                csvContent += `${codigo};${descSegura};${dados.unit};${dados.qtd};${dados.lastTime}\n`;
-            }
-
-            const encodedUri = encodeURI(csvContent);
-            const link = document.createElement("a");
-            link.setAttribute("href", encodedUri);
-            const dataStr = new Date().toISOString().slice(0,19).replace(/:/g,"-");
-            link.setAttribute("download", `inventario_${dataStr}.csv`);
-            document.body.appendChild(link);
-            link.click();
-            document.body.removeChild(link);
-        }
-    </script>
-</body>
-</html>
+        // --- FUNÇÃO PARA EDITAR CÓDIGO DE BARRAS (CRÍTICA) ---
+        function editarCodigo(codigoAntigo, inputElement
