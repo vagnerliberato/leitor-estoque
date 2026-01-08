@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Coletor Master v5</title>
+    <title>Coletor Master v5.1</title>
     <script src="https://unpkg.com/html5-qrcode" type="text/javascript"></script>
     <style>
         body { font-family: 'Segoe UI', Roboto, sans-serif; padding: 10px; text-align: center; background-color: #f4f6f9; color: #333; }
@@ -65,7 +65,7 @@
 </head>
 <body>
 
-    <h3>📦 Coletor Master v5</h3>
+    <h3>📦 Coletor Master v5.1</h3>
 
     <div class="input-group">
         <label>Descrição (Maiúsculo Automático):</label>
@@ -101,14 +101,44 @@
         document.getElementById('start-btn').addEventListener('click', () => {
             Html5Qrcode.getCameras().then(devices => {
                 if (devices && devices.length) {
-                    html5QrCode.start({ facingMode: "environment" }, config, onScanSuccess)
-                        .then(() => toggleButtons(true));
-                } else { alert("Câmera não encontrada."); }
-            }).catch(err => alert("Erro: " + err));
+                    // LÓGICA CORRIGIDA: Seleciona câmera traseira explicitamente
+                    let cameraId = devices[0].id;
+                    
+                    // Tenta encontrar a câmera traseira pelo label
+                    for(let i=0; i<devices.length; i++){
+                        const label = devices[i].label.toLowerCase();
+                        if(label.includes('back') || label.includes('traseira') || label.includes('environment')){
+                            cameraId = devices[i].id;
+                            break;
+                        }
+                    }
+
+                    // Se tiver mais de uma câmera e não achou pelo nome, tenta a segunda (geralmente é a traseira)
+                    if (devices.length > 1 && cameraId === devices[0].id) {
+                         cameraId = devices[1].id;
+                    }
+                    
+                    // Inicia passando o ID DIRETO, que é mais seguro
+                    html5QrCode.start(
+                        cameraId, 
+                        config, 
+                        onScanSuccess
+                    ).then(() => {
+                        toggleButtons(true);
+                    }).catch(err => {
+                        alert("Erro ao iniciar (start): " + err);
+                    });
+
+                } else {
+                    alert("Nenhuma câmera encontrada no dispositivo.");
+                }
+            }).catch(err => {
+                alert("Erro ao acessar permissões de câmera: " + err);
+            });
         });
 
         document.getElementById('stop-btn').addEventListener('click', () => {
-            html5QrCode.stop().then(() => toggleButtons(false));
+            html5QrCode.stop().then(() => toggleButtons(false)).catch(err => console.log(err));
         });
 
         function toggleButtons(scanning) {
@@ -147,7 +177,6 @@
             setTimeout(() => html5QrCode.resume(), 1000);
         }
 
-        // --- GERAÇÃO DA LINHA VISUAL ---
         function adicionarVisualRow(codigo) {
             const list = document.getElementById('result-list');
             const item = estoque[codigo];
@@ -155,7 +184,6 @@
             li.className = 'item-row';
             li.id = 'row-' + codigo;
             
-            // Layout: Topo (Descrição) | Baixo (Código Editável, Unidade, Qtd Editável, Botão Remover)
             li.innerHTML = `
                 <div class="row-top">
                     <span class="item-desc" id="desc-${codigo}">${item.desc}</span>
@@ -174,5 +202,108 @@
             list.prepend(li);
         }
 
-        // --- FUNÇÃO PARA EDITAR CÓDIGO DE BARRAS (CRÍTICA) ---
-        function editarCodigo(codigoAntigo, inputElement
+        function editarCodigo(codigoAntigo, inputElement) {
+            const novoCodigo = inputElement.value.trim().toUpperCase();
+            if (novoCodigo === codigoAntigo) return;
+            if (novoCodigo === "") {
+                alert("O código não pode ser vazio.");
+                inputElement.value = codigoAntigo;
+                return;
+            }
+
+            if (estoque[novoCodigo]) {
+                if(confirm(`O código ${novoCodigo} já existe!\nDeseja JUNTAR e somar as quantidades?`)) {
+                    estoque[novoCodigo].qtd += estoque[codigoAntigo].qtd;
+                    estoque[novoCodigo].lastTime = new Date().toLocaleTimeString('pt-BR');
+                    
+                    delete estoque[codigoAntigo];
+                    document.getElementById('row-' + codigoAntigo).remove();
+                    
+                    atualizarVisualRow(novoCodigo, true);
+                    atualizarTotais();
+                } else {
+                    inputElement.value = codigoAntigo;
+                }
+            } else {
+                estoque[novoCodigo] = estoque[codigoAntigo];
+                delete estoque[codigoAntigo];
+                document.getElementById('row-' + codigoAntigo).remove();
+                adicionarVisualRow(novoCodigo);
+                
+                // Pequeno delay para garantir que o DOM foi criado antes de aplicar a classe
+                setTimeout(() => {
+                    const novaLinha = document.getElementById('row-' + novoCodigo);
+                    if(novaLinha) novaLinha.classList.add('updated');
+                }, 50);
+            }
+        }
+
+        function atualizarQtd(codigo, novaQtd) {
+            const qtd = parseInt(novaQtd);
+            if (qtd && qtd > 0) {
+                estoque[codigo].qtd = qtd;
+                atualizarTotais();
+            } else {
+                document.getElementById(`qty-${codigo}`).value = estoque[codigo].qtd;
+            }
+        }
+
+        function atualizarVisualRow(codigo, highlight) {
+            const item = estoque[codigo];
+            const inputQtd = document.getElementById(`qty-${codigo}`);
+            if(inputQtd) inputQtd.value = item.qtd;
+            
+            const descEl = document.getElementById(`desc-${codigo}`);
+            if(descEl) descEl.innerText = item.desc;
+            const unitEl = document.getElementById(`unit-${codigo}`);
+            if(unitEl) unitEl.innerText = item.unit;
+
+            if(highlight) {
+                const row = document.getElementById(`row-${codigo}`);
+                if(row) {
+                    row.classList.remove('updated');
+                    void row.offsetWidth;
+                    row.classList.add('updated');
+                    document.getElementById('result-list').prepend(row);
+                }
+            }
+        }
+
+        function removerItem(codigo) {
+            if(confirm(`Remover item?`)) {
+                delete estoque[codigo];
+                const row = document.getElementById('row-' + codigo);
+                if (row) row.remove();
+                atualizarTotais();
+            }
+        }
+
+        function atualizarTotais() {
+            const total = Object.values(estoque).reduce((acc, item) => acc + item.qtd, 0);
+            document.getElementById('total-items').innerText = total;
+        }
+
+        function limparLista() {
+            if(confirm("Apagar TUDO?")) {
+                estoque = {};
+                document.getElementById('result-list').innerHTML = '';
+                atualizarTotais();
+            }
+        }
+
+        function baixarCSV() {
+            if (Object.keys(estoque).length === 0) { alert("Vazio!"); return; }
+            let csv = "data:text/csv;charset=utf-8,Codigo;Descricao;Unidade;Quantidade;Hora\n";
+            for (const [c, d] of Object.entries(estoque)) {
+                csv += `${c};"${d.desc}";${d.unit};${d.qtd};${d.lastTime}\n`;
+            }
+            const link = document.createElement("a");
+            link.setAttribute("href", encodeURI(csv));
+            link.setAttribute("download", `Inv_${new Date().toISOString().slice(0,19).replace(/:/g,"-")}.csv`);
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+        }
+    </script>
+</body>
+</html>
